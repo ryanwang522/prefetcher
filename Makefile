@@ -2,12 +2,23 @@ CFLAGS = -msse2 --std gnu99 -O0 -Wall -Wextra
 
 GIT_HOOKS := .git/hooks/applied
 
-all: $(GIT_HOOKS) main.c
+EXEC = naive sse_transpose sse_prefetch_transpose
+
+all: $(GIT_HOOKS) $(EXEC) main.c
 	$(CC) $(CFLAGS) -o main main.c
 
 $(GIT_HOOKS):
 	@scripts/install-git-hooks
 	@echo
 
+naive: main.c
+	$(CC) $(CFLAGS) -D NAIVE -o naive main.c
+
+sse_transpose: main.c
+	$(CC) $(CFLAGS) -D SSE -o sse_transpose main.c
+
+sse_prefetch_transpose: main.c
+	$(CC) $(CFLAGS) -D SSE_PREFETCH -o sse_prefetch_transpose main.c
+
 clean:
-	$(RM) main
+	$(RM) main naive sse_transpose sse_prefetch_transpose

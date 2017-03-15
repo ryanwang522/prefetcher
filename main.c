@@ -16,6 +16,34 @@
 
 #include "impl.c"
 
+typedef void (*func_t)(int *src, int *dst, int w, int h);
+typedef struct __Object Object;
+
+struct __Object {
+    func_t trans_func;
+};
+
+int init_naive(Object **self)
+{
+    if((*self = malloc(sizeof(Object))) == NULL) return -1;
+    (*self)->trans_func = naive_transpose;
+    return 0;
+}
+
+int init_sse(Object **self)
+{
+    if((*self = malloc(sizeof(Object))) == NULL) return -1;
+    (*self)->trans_func = sse_transpose;
+    return 0;
+}
+
+int init_sse_prefetch(Object **self)
+{
+    if((*self = malloc(sizeof(Object))) == NULL) return -1;
+    (*self)->trans_func = sse_prefetch_transpose;
+    return 0;
+}
+
 static long diff_in_us(struct timespec t1, struct timespec t2)
 {
     struct timespec diff;
@@ -47,7 +75,30 @@ int main()
             printf("\n");
         }
         printf("\n");
-        sse_transpose(testin, testout, 4, 4);
+
+        /* create a object and init it with corresponding define */
+        Object *interface = NULL;
+#ifdef NAIVE
+        if (init_naive(&interface) == -1) {
+            printf("init naive error.\n");
+            return -1;
+        }
+#elif defined(SSE_PREFETCH)
+        if (init_sse_prefetch(&interface) == -1) {
+            printf("init sse_prefetch error.\n");
+            return -1;
+        }
+#else
+        if (init_sse(&interface) == -1) {
+            printf("init sse error.\n");
+            return -1;
+        }
+#endif
+        interface->trans_func(testin, testout, 4, 4);
+
+        /* Original transpose
+         * sse_transpose(testin, testout, 4, 4);*/
+
         for (int y = 0; y < 4; y++) {
             for (int x = 0; x < 4; x++)
                 printf(" %2d", testout[y * 4 + x]);
