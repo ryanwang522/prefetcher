@@ -48,6 +48,42 @@ int init_sse_prefetch(Object **self)
     return 0;
 }
 
+typedef struct __Pool {
+    int *nextAvail;
+    int *end;
+} Pool;
+
+Pool *pool_create(size_t size)
+{
+    Pool *poolPtr = (Pool *) malloc(size * sizeof(int) + sizeof(Pool));
+    if (poolPtr == NULL) printf("Pool Create Failed.\n");
+    poolPtr->nextAvail = (int *)&poolPtr[1];
+    poolPtr->end = poolPtr->nextAvail + size;
+
+    return poolPtr;
+}
+
+void pool_free(Pool *poolPtr)
+{
+    free(poolPtr);
+}
+
+int pool_available(Pool *poolPtr, size_t size)
+{
+    /* Yet consider alignment */
+    return ((size_t)(poolPtr->end - poolPtr->nextAvail)) < size ? 0 : 1;
+}
+
+void *pool_alloc(Pool *poolPtr, size_t size)
+{
+    int check;
+    if ((check = pool_available(poolPtr, size)) == 0) return NULL;
+    void *mem = (void *) poolPtr->nextAvail;
+    poolPtr->nextAvail += size;
+
+    return mem;
+}
+
 static long diff_in_us(struct timespec t1, struct timespec t2)
 {
     struct timespec diff;
@@ -111,10 +147,14 @@ int main()
            "Verification fails");
 
     struct timespec start, end;
-    int *src  = (int *) malloc(sizeof(int) * TEST_W * TEST_H);
-    int *out0 = (int *) malloc(sizeof(int) * TEST_W * TEST_H);
-    int *out1 = (int *) malloc(sizeof(int) * TEST_W * TEST_H);
-    int *out2 = (int *) malloc(sizeof(int) * TEST_W * TEST_H);
+    /*  Original malloc
+     *  int *src  = (int *) malloc(sizeof(int) * TEST_W * TEST_H);
+     *  int *out0 = (int *) malloc(sizeof(int) * TEST_W * TEST_H);
+     */
+
+    Pool *p = pool_create(sizeof(int) * TEST_W * TEST_H * 2);
+    int *src = (int *)pool_alloc(p, sizeof(int) * TEST_W * TEST_H);
+    int *out0 = (int *)pool_alloc(p, sizeof(int) * TEST_W * TEST_H);
 
     srand(time(NULL));
     for (int y = 0; y < TEST_H; y++)
@@ -126,10 +166,11 @@ int main()
     clock_gettime(CLOCK_REALTIME, &end);
     printf("%s: \t %ld us\n", interface->mode, diff_in_us(start, end));
 
-    free(src);
-    free(out0);
-    free(out1);
-    free(out2);
+    /* Origingal free()
+     * free(src);
+     * free(out0);
+     */
+    pool_free(p);
 
     return 0;
 }

@@ -12,13 +12,13 @@ $(GIT_HOOKS):
 	@echo
 
 naive: main.c
-	$(CC) $(CFLAGS) -D NAIVE -o naive main.c
+	$(CC) $(CFLAGS) -DNAIVE -o naive main.c
 
 sse_transpose: main.c
-	$(CC) $(CFLAGS) -D SSE -o sse_transpose main.c
+	$(CC) $(CFLAGS) -DSSE -o sse_transpose main.c
 
 sse_prefetch_transpose: main.c
-	$(CC) $(CFLAGS) -D SSE_PREFETCH -o sse_prefetch_transpose main.c
+	$(CC) $(CFLAGS) -DSSE_PREFETCH -o sse_prefetch_transpose main.c
 
 clean:
 	$(RM) main naive sse_transpose sse_prefetch_transpose
